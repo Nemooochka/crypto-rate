@@ -1,4 +1,4 @@
-# crypto-rate
+# CryptoRate
 
 Get the full crypto rate info in one place!
 
