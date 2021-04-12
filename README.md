@@ -2,7 +2,7 @@
 
 Get the full crypto rate info in one place!
 
-https://min-api.cryptocompare.com/
+[Cryptocompare API](https://min-api.cryptocompare.com)
 
 1. Get the current Bitcoin/Ethereum/Binance/etc price to uah/usd/euro
 2. Add % change in price from yesterday
