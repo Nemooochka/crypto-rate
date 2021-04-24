@@ -1,3 +1,7 @@
+* {
+  box-sizing: border-box;
+}
+
 body {
   padding: 15px 0;
   background: #f2f5fa;
@@ -53,6 +57,7 @@ body {
   display: flex;
   flex-direction: row;
   margin-bottom: 6px;
+  padding: 0 10px;
   background-color: #fff;
 }
 
@@ -61,7 +66,7 @@ body {
   flex-direction: column;
   justify-content: space-between;
   width: 28%;
-  padding: 20px 28px;
+  padding: 20px 10px;
 }
 
 .coinInfoBlock:first-of-type {
@@ -82,7 +87,11 @@ body {
   .coinInfo {
     display: inline-flex;
     flex-direction: column;
-    width: 48%;
-    margin: 0 1%;
+    width: 100%;
+  }
+
+  .coinInfoBlock {
+    width: 100% !important;
+    padding: 14px 10px;
   }
 }
