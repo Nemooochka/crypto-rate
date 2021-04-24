@@ -10,4 +10,3 @@ https://min-api.cryptocompare.com/
 4. Add filters by current price/volume/market cap
 5. Check price for any other days in the past
 6. As plus: Visualize data by graphic
-
