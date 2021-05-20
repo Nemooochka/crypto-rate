@@ -22,18 +22,18 @@ window.loadData = url => {
   return fetch(url + `&api_key={${process.env.CRYPTO_API_KEY}}`)
     .then(response => response.json())
     .then(data => {
-      window.dataStorage.coinsDataDisplay = data['DISPLAY'];
-      window.dataStorage.coinsDataRaw = data['RAW'];
-      window.rearengeData(window.dataStorage.coinsDataDisplay);
+      window.dataStorage.coinsDataRaw = data['DISPLAY'];
+      window.dataStorage.coinsDataFull = data['RAW'];
+      window.rearengeData(window.dataStorage.coinsDataRaw);
     });
 };
 
 window.getAvailablePairs = () => {
-  const { coinsDataDisplay, availableFiats, availableCoins } = window.dataStorage;
+  const { coinsDataRaw, availableFiats, availableCoins } = window.dataStorage;
   let findFirst = 0;
-  for (let coin in coinsDataDisplay) {
+  for (let coin in coinsDataRaw) {
     availableCoins.push(coin);
-    for (let fiat in coinsDataDisplay[coin]) {
+    for (let fiat in coinsDataRaw[coin]) {
       if (!findFirst) {
         availableFiats.push(fiat);
       }
@@ -42,23 +42,20 @@ window.getAvailablePairs = () => {
   }
 };
 
-window.rearengeData = coinsDataDisplay => {
-  let coinsDataUpd = [];
-  for (let coin in coinsDataDisplay) {
-    for (let fiat in coinsDataDisplay[coin]) {
-      coinsDataDisplay[coin][fiat]['coinName'] =
-        window.dataStorage.coinsDataRaw[coin][fiat]['FROMSYMBOL'];
-      coinsDataDisplay[coin][fiat]['coinPrice'] =
-        window.dataStorage.coinsDataRaw[coin][fiat]['PRICE'];
-      coinsDataDisplay[coin][fiat]['coinChange'] =
-        window.dataStorage.coinsDataRaw[coin][fiat]['CHANGEPCTDAY'];
-      coinsDataDisplay[coin][fiat]['coinCap'] =
-        window.dataStorage.coinsDataRaw[coin][fiat]['MKTCAP'];
-      coinsDataDisplay[coin][fiat]['coinVolume'] =
-        window.dataStorage.coinsDataRaw[coin][fiat]['VOLUMEDAYTO'];
+window.rearengeData = coinsDataRaw => {
+  let coinsDataUpd = coinsDataRaw;
+  for (let coin in coinsDataUpd) {
+    coinsDataUpd.push(coinsDataRaw[coin]);
+    for (let fiat in coinsDataRaw[coin]) {
+      coinsDataUpd[coin][fiat]['coinName'] = window.dataStorage.coinsDataFull[coin][fiat]['FROMSYMBOL'];
+      coinsDataUpd[coin][fiat]['coinPrice'] = window.dataStorage.coinsDataFull[coin][fiat]['PRICE'];
+      coinsDataUpd[coin][fiat]['coinChange'] = window.dataStorage.coinsDataFull[coin][fiat]['CHANGEPCTDAY'];
+      coinsDataUpd[coin][fiat]['coinCap'] = window.dataStorage.coinsDataFull[coin][fiat]['MKTCAP'];
+      coinsDataUpd[coin][fiat]['coinVolume'] = window.dataStorage.coinsDataFull[coin][fiat]['VOLUMEDAYTO'];
     }
-    coinsDataUpd.push(coinsDataDisplay[coin]);
   }
+
+  console.log(coinsDataUpd);
 
   window.dataStorage.coinsDataUpd = coinsDataUpd;
 };
@@ -90,34 +87,35 @@ window.filter = event => {
   const filters = [
     {
       filterName: 'asset',
-      value: 'coinName',
+      value: 'coinName'
     },
     {
       filterName: 'price',
-      value: 'coinPrice',
+      value: 'PRICE'
     },
     {
       filterName: 'returns',
-      value: 'coinChange',
+      value: 'CHANGEPCTDAY'
     },
     {
       filterName: 'cap',
-      value: 'coinCap',
+      value: 'MKTCAP'
     },
     {
       filterName: 'volume',
-      value: 'coinVolume',
-    },
-  ];
+      value: 'VOLUMEDAYTO'
+    }
+  ]
 
   let filteredArr = [];
+  let prevValue = 0;
   let activeFilterName;
-  const { coinsDataDisplay, coinsDataUpd, activeFiat } = window.dataStorage;
+  const { coinsDataRaw, coinsDataUpd, activeFiat } = window.dataStorage;
 
   const activeElement = event;
   const activeElementFilter = activeElement.getAttribute('data-filter');
   filters.map(elem => {
-    if (elem['filterName'] === activeElementFilter) activeFilterName = elem['value'];
+    if(elem['filterName'] === activeElementFilter) activeFilterName = elem['value'];
   });
 
   if (!activeElement.classList.contains('active')) {
@@ -127,23 +125,27 @@ window.filter = event => {
     activeElement.classList.add('active');
   }
 
-  const formatNumberValue = number => {
+  const formatNumberValue = (number) => {
     let numberValue = number.replace(/^\D+/g, '');
     numberValue = numberValue.replace(/,/g, '');
 
     return numberValue;
-  };
+  }
 
   for (let data in coinsDataUpd) {
-    if (activeFilterName === 'coinName') {
-      filteredArr = coinsDataUpd.sort((a, b) =>
-        a[activeFiat][activeFilterName].localeCompare(b[activeFiat][activeFilterName]),
-      );
-    } else {
-      filteredArr = coinsDataUpd.sort(
-        (a, b) => a[activeFiat][activeFilterName] - b[activeFiat][activeFilterName],
-      );
-    }
+    let numberValue = coinsDataUpd[data][activeFiat][activeFilterName].replace(/^\D+/g, '');
+    numberValue = numberValue.replace(/,/g, '');
+
+    filteredArr = coinsDataUpd.sort(function(a,b) {
+      console.log(a, b, formatNumberValue(a[activeFiat][activeFilterName]), formatNumberValue(b[activeFiat][activeFilterName]) );
+      return formatNumberValue(a[activeFiat][activeFilterName]) - formatNumberValue(b[activeFiat][activeFilterName]);
+    });
+    // if (numberValue > prevValue) {
+    //   filteredArr.unshift(coinsDataUpd[data]);
+    //   prevValue = numberValue;
+    // } else {
+    //   filteredArr.push(coinsDataUpd[data]);
+    // }
   }
 
   let classes = [];
@@ -165,6 +167,7 @@ window.filter = event => {
     classes: classes,
   };
 
+  console.log(filteredArr);
   window.dataStorage.filteredArr = filteredArr;
 
   window.renderApp();
@@ -175,7 +178,7 @@ const renderCoinsTable = () => {
     styles.tbody
   }">`;
   const {
-    coinsDataDisplay,
+    coinsDataRaw,
     coinsDataUpd,
     availableFiats,
     filteredArr,
@@ -223,18 +226,10 @@ const generateCoinsTableHeader = () => {
                 <div class="${styles.tr}">`;
 
   headers.map(elem => {
-    view += `<div class="
+      view += `<div class="
             ${styles.th}
-            ${
-              elem.filter === window.dataStorage.activeFilter['attr']
-                ? window.dataStorage.activeFilter['classes'][0]
-                : ''
-            }
-            ${
-              elem.filter === window.dataStorage.activeFilter['attr']
-                ? window.dataStorage.activeFilter['classes'][1]
-                : ''
-            }" onclick="(${window.filter})(this)" data-filter="${elem.filter}">
+            ${elem.filter === window.dataStorage.activeFilter['attr'] ? window.dataStorage.activeFilter['classes'][0] : ''}
+            ${elem.filter === window.dataStorage.activeFilter['attr'] ? window.dataStorage.activeFilter['classes'][1] : ''}" onclick="(${window.filter})(this)" data-filter="${elem.filter}">
             <i class="${styles.sortingIcon}"></i>
             <span>${elem.title}</span>
         </div>`;
@@ -336,13 +331,13 @@ startApp();
 
 // const renderCoins = () => {
 //   let view = '';
-//   const { coinsDataDisplay, availableFiats } = window.dataStorage;
+//   const { coinsDataRaw, availableFiats } = window.dataStorage;
 
-//   for (let coin in coinsDataDisplay) {
+//   for (let coin in coinsDataRaw) {
 //     view += `<div class="${styles.coinContainer}" id="${coin}">
 //         ${generateCoinTitle(coin)}
 //         <div class="${styles.coinInfo}">
-//           ${generateCoinInfo(coinsDataDisplay[coin])}
+//           ${generateCoinInfo(coinsDataRaw[coin])}
 //         </div>
 //       </div>`;
 //   }

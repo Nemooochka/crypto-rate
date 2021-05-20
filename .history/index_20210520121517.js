@@ -46,19 +46,15 @@ window.rearengeData = coinsDataDisplay => {
   let coinsDataUpd = [];
   for (let coin in coinsDataDisplay) {
     for (let fiat in coinsDataDisplay[coin]) {
-      coinsDataDisplay[coin][fiat]['coinName'] =
-        window.dataStorage.coinsDataRaw[coin][fiat]['FROMSYMBOL'];
-      coinsDataDisplay[coin][fiat]['coinPrice'] =
-        window.dataStorage.coinsDataRaw[coin][fiat]['PRICE'];
-      coinsDataDisplay[coin][fiat]['coinChange'] =
-        window.dataStorage.coinsDataRaw[coin][fiat]['CHANGEPCTDAY'];
-      coinsDataDisplay[coin][fiat]['coinCap'] =
-        window.dataStorage.coinsDataRaw[coin][fiat]['MKTCAP'];
-      coinsDataDisplay[coin][fiat]['coinVolume'] =
-        window.dataStorage.coinsDataRaw[coin][fiat]['VOLUMEDAYTO'];
+      coinsDataDisplay[coin][fiat]['coinName'] = window.dataStorage.coinsDataRaw[coin][fiat]['FROMSYMBOL'];
+      coinsDataDisplay[coin][fiat]['coinPrice'] = window.dataStorage.coinsDataRaw[coin][fiat]['PRICE'];
+      coinsDataDisplay[coin][fiat]['coinChange'] = window.dataStorage.coinsDataRaw[coin][fiat]['CHANGEPCTDAY'];
+      coinsDataDisplay[coin][fiat]['coinCap'] = window.dataStorage.coinsDataRaw[coin][fiat]['MKTCAP'];
+      coinsDataDisplay[coin][fiat]['coinVolume'] = window.dataStorage.coinsDataRaw[coin][fiat]['VOLUMEDAYTO'];
     }
     coinsDataUpd.push(coinsDataDisplay[coin]);
   }
+
 
   window.dataStorage.coinsDataUpd = coinsDataUpd;
 };
@@ -90,34 +86,35 @@ window.filter = event => {
   const filters = [
     {
       filterName: 'asset',
-      value: 'coinName',
+      value: 'coinName'
     },
     {
       filterName: 'price',
-      value: 'coinPrice',
+      value: 'coinPrice'
     },
     {
       filterName: 'returns',
-      value: 'coinChange',
+      value: 'coinChange'
     },
     {
       filterName: 'cap',
-      value: 'coinCap',
+      value: 'coinCap'
     },
     {
       filterName: 'volume',
-      value: 'coinVolume',
-    },
-  ];
+      value: 'coinVolume'
+    }
+  ]
 
   let filteredArr = [];
+  let prevValue = 0;
   let activeFilterName;
   const { coinsDataDisplay, coinsDataUpd, activeFiat } = window.dataStorage;
 
   const activeElement = event;
   const activeElementFilter = activeElement.getAttribute('data-filter');
   filters.map(elem => {
-    if (elem['filterName'] === activeElementFilter) activeFilterName = elem['value'];
+    if(elem['filterName'] === activeElementFilter) activeFilterName = elem['value'];
   });
 
   if (!activeElement.classList.contains('active')) {
@@ -127,23 +124,31 @@ window.filter = event => {
     activeElement.classList.add('active');
   }
 
-  const formatNumberValue = number => {
+  const formatNumberValue = (number) => {
     let numberValue = number.replace(/^\D+/g, '');
     numberValue = numberValue.replace(/,/g, '');
 
     return numberValue;
-  };
+  }
 
   for (let data in coinsDataUpd) {
-    if (activeFilterName === 'coinName') {
-      filteredArr = coinsDataUpd.sort((a, b) =>
-        a[activeFiat][activeFilterName].localeCompare(b[activeFiat][activeFilterName]),
-      );
+    console.log(activeFilterName, coinsDataUpd[data][activeFiat][activeFilterName]);
+
+    if(activeFilterName === 'coinName') {
+      filteredArr.sort((a, b) => {
+        
+      }
     } else {
-      filteredArr = coinsDataUpd.sort(
-        (a, b) => a[activeFiat][activeFilterName] - b[activeFiat][activeFilterName],
-      );
+      filteredArr = coinsDataUpd.sort(function(a,b) {
+        return a[activeFiat][activeFilterName] - b[activeFiat][activeFilterName];
+      });
     }
+    // if (numberValue > prevValue) {
+    //   filteredArr.unshift(coinsDataUpd[data]);
+    //   prevValue = numberValue;
+    // } else {
+    //   filteredArr.push(coinsDataUpd[data]);
+    // }
   }
 
   let classes = [];
@@ -165,6 +170,7 @@ window.filter = event => {
     classes: classes,
   };
 
+  console.log(filteredArr);
   window.dataStorage.filteredArr = filteredArr;
 
   window.renderApp();
@@ -223,18 +229,10 @@ const generateCoinsTableHeader = () => {
                 <div class="${styles.tr}">`;
 
   headers.map(elem => {
-    view += `<div class="
+      view += `<div class="
             ${styles.th}
-            ${
-              elem.filter === window.dataStorage.activeFilter['attr']
-                ? window.dataStorage.activeFilter['classes'][0]
-                : ''
-            }
-            ${
-              elem.filter === window.dataStorage.activeFilter['attr']
-                ? window.dataStorage.activeFilter['classes'][1]
-                : ''
-            }" onclick="(${window.filter})(this)" data-filter="${elem.filter}">
+            ${elem.filter === window.dataStorage.activeFilter['attr'] ? window.dataStorage.activeFilter['classes'][0] : ''}
+            ${elem.filter === window.dataStorage.activeFilter['attr'] ? window.dataStorage.activeFilter['classes'][1] : ''}" onclick="(${window.filter})(this)" data-filter="${elem.filter}">
             <i class="${styles.sortingIcon}"></i>
             <span>${elem.title}</span>
         </div>`;
