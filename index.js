@@ -10,7 +10,8 @@ window.dataStorage = {
   availableFiats: [],
   availableCoins: [],
   activeFiat: 'USD',
-  newData: [],
+  isDataLoading: false,
+  error: null,
   activeFilter: {
     attr: '',
     classes: [],
@@ -18,13 +19,20 @@ window.dataStorage = {
 };
 
 window.loadData = url => {
-  let a = url + `&api_key={${process.env.CRYPTO_API_KEY}}`;
+  window.dataStorage.isDataLoading = true;
+  window.renderApp();
+  window.dataStorage.error = null;
   return fetch(url + `&api_key={${process.env.CRYPTO_API_KEY}}`)
     .then(response => response.json())
     .then(data => {
+      window.dataStorage.isDataLoading = false;
       window.dataStorage.coinsDataDisplay = data['DISPLAY'];
       window.dataStorage.coinsDataRaw = data['RAW'];
       window.rearengeData(window.dataStorage.coinsDataDisplay);
+    })
+    .catch(error => {
+      window.dataStore.error = error;
+      return Promise.resolve({});
     });
 };
 
@@ -77,12 +85,6 @@ const startApp = () => {
     let selectedFiat = event.options[event.selectedIndex].value;
     window.dataStorage['activeFiat'] = selectedFiat;
     window.renderApp();
-  };
-
-  window.renderApp = () => {
-    document.getElementById('app-root').innerHTML = `
-            ${App()}
-        `;
   };
 };
 
@@ -171,9 +173,12 @@ window.filter = event => {
 };
 
 const renderCoinsTable = () => {
-  let view = `<div class="${styles.coinsTable}"> ${generateCoinsTableHeader()} <div class="${
-    styles.tbody
-  }">`;
+  if (window.dataStorage.isDataLoading) {
+    return `<div>Data is loading</div>`;
+  }
+  let view = `${window.selectFiat()} <div class="${
+    styles.coinsTable
+  }"> ${generateCoinsTableHeader()} <div class="${styles.tbody}">`;
   const {
     coinsDataDisplay,
     coinsDataUpd,
@@ -187,8 +192,8 @@ const renderCoinsTable = () => {
 
   for (let coin in actualData) {
     view += `<div class="${styles.tr}" id="${actualData[coin][activeFiat]['coinName']}">
-        ${generateCoinsTable(actualData[coin])}
-      </div>`;
+                ${generateCoinsTable(actualData[coin])}
+              </div>`;
   }
 
   view += '</div></div>';
@@ -234,7 +239,7 @@ const generateCoinsTableHeader = () => {
               elem.filter === window.dataStorage.activeFilter['attr']
                 ? window.dataStorage.activeFilter['classes'][1]
                 : ''
-            }" onclick="(${window.filter})(this)" data-filter="${elem.filter}">
+            }" onclick="window.filter(this)" data-filter="${elem.filter}">
             <i class="${styles.sortingIcon}"></i>
             <span>${elem.title}</span>
         </div>`;
@@ -242,32 +247,6 @@ const generateCoinsTableHeader = () => {
 
   view += `</div></div>`;
   return view;
-
-  // return `
-  // <div class="${styles.thead} thead">
-  // <div class="${styles.tr}">
-  //   <div class="${styles.th}" onclick="(${window.filter})(this)" data-filter="asset">
-  //     <span>Asset</span>
-  //   </div>
-  //   <div class="${styles.th}" onclick="(${window.filter})(this)" data-filter="price">
-  //     <i class="${styles.sortingIcon}"></i>
-  //     <span>Price</span>
-  //   </div>
-  //   <div class="${styles.th}" onclick="(${window.filter})(this)" data-filter="returns">
-  //     <i class="${styles.sortingIcon}"></i>
-  //     <span>Returns (24h)</span>
-  //   </div>
-  //   <div class="${styles.th}" onclick="(${window.filter})(this)" data-filter="cap">
-  //     <i class="${styles.sortingIcon}"></i>
-  //     <span>Market Cap</span>
-  //   </div>
-  //   <div class="${styles.th}" onclick="(${window.filter})(this)" data-filter="volume">
-  //     <i class="${styles.sortingIcon}"></i>
-  //     <span>Total Exchange Volume</span>
-  //   </div>
-  //   </div>
-  // </div>
-  //   `;
 };
 
 const generateCoinsTable = coinData => {
@@ -303,8 +282,8 @@ const generateCoinsTable = coinData => {
   return coinsTableBlock;
 };
 
-const selectFiat = () => {
-  let view = `<select class="${styles.coinToFiatSelect}" onchange="(${window.updateFiatCurrency})(this)">`;
+window.selectFiat = () => {
+  let view = `<select class="${styles.coinToFiatSelect}" onchange="window.updateFiatCurrency(this)">`;
   const { activeFiat, availableFiats } = window.dataStorage;
 
   availableFiats.map(fiat => {
@@ -321,12 +300,11 @@ const selectFiat = () => {
 
 const App = () => {
   return `<div class="${styles.coins}">
-    ${selectFiat()}
-    ${renderCoinsTable()}
+      ${renderCoinsTable()}
   </div>`;
 };
 
-const renderApp = () => {
+window.renderApp = () => {
   document.getElementById('app-root').innerHTML = `
           ${App()}
       `;
