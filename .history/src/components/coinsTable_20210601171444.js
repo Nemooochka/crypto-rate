@@ -1,6 +1,7 @@
 import styles from '../styles.css';
 
 import SelectFiat from './SelectFiat';
+import Filters from './Filters';
 
 export default function CoinsTable() {
   const renderCoinsTable = () => {
@@ -71,7 +72,7 @@ export default function CoinsTable() {
                   elem.filter === window.dataStorage.activeFilter['attr']
                     ? window.dataStorage.activeFilter['classes'][1]
                     : ''
-                }" onclick="window.Filters(this)" data-filter="${elem.filter}">
+                }" onclick="(window.Filters})(this)" data-filter="${elem.filter}">
                 <i class="${styles.sortingIcon}"></i>
                 <span>${elem.title}</span>
             </div>`;

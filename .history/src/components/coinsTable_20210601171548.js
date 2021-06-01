@@ -71,7 +71,7 @@ export default function CoinsTable() {
                   elem.filter === window.dataStorage.activeFilter['attr']
                     ? window.dataStorage.activeFilter['classes'][1]
                     : ''
-                }" onclick="window.Filters(this)" data-filter="${elem.filter}">
+                }" onclick="(window.Filters(this)" data-filter="${elem.filter}">
                 <i class="${styles.sortingIcon}"></i>
                 <span>${elem.title}</span>
             </div>`;

@@ -7,7 +7,7 @@ window.updateFiatCurrency = event => {
 };
 
 export default function selectFiat() {
-  let view = `<select class="${styles.coinToFiatSelect}" onchange="window.updateFiatCurrency(this)">`;
+  let view = `<select class="${styles.coinToFiatSelect}" onchange="updateFiatCurrency(this)">`;
   const { activeFiat, availableFiats } = window.dataStorage;
 
   availableFiats.map(fiat => {

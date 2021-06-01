@@ -1,13 +1,13 @@
 import styles from '../styles.css';
 
-window.updateFiatCurrency = event => {
+const updateFiatCurrency = event => {
   let selectedFiat = event.options[event.selectedIndex].value;
   window.dataStorage['activeFiat'] = selectedFiat;
   window.renderApp();
 };
 
 export default function selectFiat() {
-  let view = `<select class="${styles.coinToFiatSelect}" onchange="window.updateFiatCurrency(this)">`;
+  let view = `<select class="${styles.coinToFiatSelect}" onchange="(${updateFiatCurrency})(this)">`;
   const { activeFiat, availableFiats } = window.dataStorage;
 
   availableFiats.map(fiat => {
