@@ -1,0 +1,46 @@
+/** @jsx createElement */
+/** @jsxFrag createFragment */
+import { createElement, createFragment, useState, useEffect } from '../framework';
+import CoinsTable from './CoinsTable';
+import { startApp, loadData } from '../data/coinsData';
+
+export default function App() {
+  const [coinsDataUpd, setCoinsDataUpd] = useState([]);
+  const [availableCoins, setAvailableCoins] = useState([]);
+  const [availableFiats, setAvailableFiats] = useState(['USD', 'EUR']);
+  const [isDataLoading, setIsDataLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const activeFilter = useState({
+    attr: '',
+    classes: [],
+  });
+  // availableCoins: [],
+  // activeFiat: 'USD',
+  // isDataLoading: false,
+  // error: null,
+  // activeFilter: {
+  //   attr: '',
+  //   classes: [],
+  // }
+
+  useEffect(() => {
+    setIsDataLoading(true);
+    loadData()
+      .then(data => {
+        const { message, code } = data;
+
+        if (code !== '200' && message) throw Error(message);
+
+        setError(null);
+        setWeatherData({
+          today: getWeatherForToday(data.list),
+          forecast: getWeatherForecast(data.list),
+          currentCity,
+        });
+      })
+      .catch(setError)
+      .finally(() => setIsLoading(false));
+  });
+
+  return <CoinsTable availableFiats={availableFiats} />;
+}
