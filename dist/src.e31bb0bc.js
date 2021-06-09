@@ -117,13 +117,31 @@ parcelRequire = (function (modules, cache, entry, globalName) {
   }
 
   return newRequire;
-})({"framework/element.js":[function(require,module,exports) {
+})({"utils.js":[function(require,module,exports) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.createFragment = exports.createElement = void 0;
+exports.isFunction = void 0;
+
+var isFunction = function isFunction(func) {
+  return typeof func === 'function';
+};
+
+exports.isFunction = isFunction;
+},{}],"framework/hooks.js":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.createFunctionElement = createFunctionElement;
+exports.useState = useState;
+exports.useEffect = useEffect;
+exports.useContext = exports.current = void 0;
+
+var _utils = require("../utils");
 
 function ownKeys(object, enumerableOnly) { var keys = Object.keys(object); if (Object.getOwnPropertySymbols) { var symbols = Object.getOwnPropertySymbols(object); if (enumerableOnly) symbols = symbols.filter(function (sym) { return Object.getOwnPropertyDescriptor(object, sym).enumerable; }); keys.push.apply(keys, symbols); } return keys; }
 
@@ -131,26 +149,119 @@ function _objectSpread(target) { for (var i = 1; i < arguments.length; i++) { va
 
 function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
 
-/**
- * Creates DOM Node. Implements jsx-parser's createElement API
- * @param {string|Function} tag - HTML tag as string or Component function
- * @param {object} props - element properties as parsed by jsx-parser
- * @param {Node[]} children - child elements
- * @returns {DocumentFragment|Element}
- */
-const createElement = (tag, props, ...children) => {
-  if (typeof tag === 'function') {
-    /*
-        Passing children as the 2nd argument is required as jsx transformer puts component functions
-        and regular tags in wrapper functions that expect children as the 2nd param
-       */
-    return tag(_objectSpread(_objectSpread({}, props), {}, {
-      children
-    }), children);
+var current = {
+  shouldReRender: true,
+  wipComponent: null,
+  hookIndex: null
+};
+exports.current = current;
+
+function createFunctionElement(tag, props, children) {
+  current.wipComponent = tag;
+  current.hookIndex = 0;
+  current.wipComponent.hooks = current.wipComponent.hooks || [];
+  return tag(_objectSpread(_objectSpread({}, props), {}, {
+    children: children
+  }), children);
+}
+
+function useState(initial) {
+  var wipComponent = current.wipComponent,
+      hookIndex = current.hookIndex;
+  var oldHook = wipComponent.hooks[hookIndex];
+  var hook = {
+    state: oldHook ? oldHook.state : initial,
+    queue: []
+  };
+  var actions = oldHook ? oldHook.queue : [];
+  actions.forEach(function (action) {
+    hook.state = (0, _utils.isFunction)(action) ? action(hook.state) : action;
+  });
+
+  var setState = function setState(action) {
+    current.shouldReRender = true;
+    hook.queue.push(action);
+  };
+
+  wipComponent.hooks[hookIndex] = hook;
+  current.hookIndex++;
+  return [hook.state, setState];
+}
+
+function useEffect(effect, deps) {
+  var wipComponent = current.wipComponent,
+      hookIndex = current.hookIndex;
+  var oldHook = wipComponent.hooks[hookIndex];
+  var oldDeps = oldHook ? oldHook.deps : undefined;
+  var hasChanged = hasDepsChanged(oldDeps, deps);
+  current.hookIndex++;
+  if (!hasChanged) return;
+
+  if (oldHook && oldHook.unmount) {
+    window.removeEventListener('beforeunload', oldHook.unmount);
   }
 
-  const element = tag === '' ? new DocumentFragment() : document.createElement(tag);
-  Object.entries(props || {}).forEach(([name, value]) => {
+  wipComponent.hooks[hookIndex] = {
+    unmount: effect(),
+    deps: deps
+  };
+  window.addEventListener('beforeunload', wipComponent.hooks[hookIndex].unmount);
+}
+
+var hasDepsChanged = function hasDepsChanged(prevDeps, nextDeps) {
+  return !prevDeps || !nextDeps || prevDeps.length !== nextDeps.length || prevDeps.some(function (dep, index) {
+    return dep !== nextDeps[index];
+  });
+};
+
+var useContext = function useContext(Context) {
+  return Context.value;
+};
+
+exports.useContext = useContext;
+},{"../utils":"utils.js"}],"framework/element.js":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.createFragment = exports.createElement = void 0;
+
+var _hooks = require("./hooks");
+
+var _utils = require("../utils");
+
+function _slicedToArray(arr, i) { return _arrayWithHoles(arr) || _iterableToArrayLimit(arr, i) || _unsupportedIterableToArray(arr, i) || _nonIterableRest(); }
+
+function _nonIterableRest() { throw new TypeError("Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
+
+function _unsupportedIterableToArray(o, minLen) { if (!o) return; if (typeof o === "string") return _arrayLikeToArray(o, minLen); var n = Object.prototype.toString.call(o).slice(8, -1); if (n === "Object" && o.constructor) n = o.constructor.name; if (n === "Map" || n === "Set") return Array.from(o); if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return _arrayLikeToArray(o, minLen); }
+
+function _arrayLikeToArray(arr, len) { if (len == null || len > arr.length) len = arr.length; for (var i = 0, arr2 = new Array(len); i < len; i++) { arr2[i] = arr[i]; } return arr2; }
+
+function _iterableToArrayLimit(arr, i) { if (typeof Symbol === "undefined" || !(Symbol.iterator in Object(arr))) return; var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"] != null) _i["return"](); } finally { if (_d) throw _e; } } return _arr; }
+
+function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
+
+var createElement = function createElement(tag, props) {
+  for (var _len = arguments.length, children = new Array(_len > 2 ? _len - 2 : 0), _key = 2; _key < _len; _key++) {
+    children[_key - 2] = arguments[_key];
+  }
+
+  if ((0, _utils.isFunction)(tag)) {
+    /*
+      Passing children as the 2nd argument is required as jsx transformer puts component functions
+      and regular tags in wrapper functions that expect children as the 2nd param
+     */
+    return (0, _hooks.createFunctionElement)(tag, props, children);
+  }
+
+  var element = tag === '' ? new DocumentFragment() : document.createElement(tag);
+  Object.entries(props || {}).forEach(function (_ref) {
+    var _ref2 = _slicedToArray(_ref, 2),
+        name = _ref2[0],
+        value = _ref2[1];
+
     if (name.startsWith('on') && name.toLowerCase() in window) {
       element.addEventListener(name.toLowerCase().substr(2),
       /** @type {Function} */
@@ -162,14 +273,8 @@ const createElement = (tag, props, ...children) => {
           // https://developer.mozilla.org/en-US/docs/Web/API/Element/setAttribute#example
           if (['disabled', 'checked'].includes(name) && !value) {
             element.removeAttribute(name);
-          } else if (name.toLowerCase() === 'classname') {
-            // We want to treat both strings and arrays in a similar manner
-            const classList = typeof value === 'string' ? value.split(' ').filter(Boolean) : value;
-            element.classList.add(...classList);
           } else {
-            element.setAttribute(name,
-            /** @type {string} */
-            value);
+            element.setAttribute(name, value);
           }
         }
       } catch (e) {
@@ -177,7 +282,9 @@ const createElement = (tag, props, ...children) => {
       }
     }
   });
-  children.forEach(child => appendChild(element, child));
+  children.forEach(function (child) {
+    return appendChild(element, child);
+  });
   return element;
 };
 /**
@@ -189,9 +296,11 @@ const createElement = (tag, props, ...children) => {
 
 exports.createElement = createElement;
 
-const appendChild = (parent, child) => {
+var appendChild = function appendChild(parent, child) {
   if (Array.isArray(child)) {
-    child.forEach(subChild => appendChild(parent, subChild));
+    child.forEach(function (subChild) {
+      return appendChild(parent, subChild);
+    });
   } else {
     // Skip null and undefined
     if (child != null) {
@@ -207,10 +316,203 @@ const appendChild = (parent, child) => {
  */
 
 
-const createFragment = (props, ...children) => createElement('', props, ...children);
+var createFragment = function createFragment(props) {
+  for (var _len2 = arguments.length, children = new Array(_len2 > 1 ? _len2 - 1 : 0), _key2 = 1; _key2 < _len2; _key2++) {
+    children[_key2 - 1] = arguments[_key2];
+  }
+
+  return createElement.apply(void 0, ['', props].concat(children));
+};
 
 exports.createFragment = createFragment;
-},{}],"../node_modules/parcel-bundler/src/builtins/bundle-url.js":[function(require,module,exports) {
+},{"./hooks":"framework/hooks.js","../utils":"utils.js"}],"framework/context.js":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.createContext = createContext;
+
+var _framework = require("../framework");
+
+var _utils = require("../utils");
+
+function _slicedToArray(arr, i) { return _arrayWithHoles(arr) || _iterableToArrayLimit(arr, i) || _unsupportedIterableToArray(arr, i) || _nonIterableRest(); }
+
+function _nonIterableRest() { throw new TypeError("Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
+
+function _unsupportedIterableToArray(o, minLen) { if (!o) return; if (typeof o === "string") return _arrayLikeToArray(o, minLen); var n = Object.prototype.toString.call(o).slice(8, -1); if (n === "Object" && o.constructor) n = o.constructor.name; if (n === "Map" || n === "Set") return Array.from(o); if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return _arrayLikeToArray(o, minLen); }
+
+function _arrayLikeToArray(arr, len) { if (len == null || len > arr.length) len = arr.length; for (var i = 0, arr2 = new Array(len); i < len; i++) { arr2[i] = arr[i]; } return arr2; }
+
+function _iterableToArrayLimit(arr, i) { if (typeof Symbol === "undefined" || !(Symbol.iterator in Object(arr))) return; var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"] != null) _i["return"](); } finally { if (_d) throw _e; } } return _arr; }
+
+function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
+
+/**
+ * @typedef {Object} Context
+ * @property {*} Provider - Provider
+ * @property {*} Consumer - Consumer
+ */
+
+/**
+ * Creates Context object with Provider and Consumer
+ * @param {*} defaultValue - defaultValue of created context
+ * @returns {Context} context object
+ */
+function createContext(defaultValue) {
+  var context = {
+    value: defaultValue,
+    Provider: null,
+    Consumer: null
+  };
+  var hasWarnedAboutUsingUseContext = false;
+
+  context.Provider = function (_ref) {
+    var _ref$value = _ref.value,
+        value = _ref$value === void 0 ? defaultValue : _ref$value,
+        children = _ref.children;
+
+    if (!Object.is(context.value, value)) {
+      _framework.current.shouldReRender = true;
+      context.value = value;
+    }
+
+    return children;
+  };
+
+  context.Consumer = function (_ref2) {
+    var children = _ref2.children;
+
+    var _children = _slicedToArray(children, 1),
+        renderFunction = _children[0];
+
+    if (!(0, _utils.isFunction)(renderFunction)) {
+      !hasWarnedAboutUsingUseContext && console.warn('Requires a function as a child.', '\n', 'The function receives the current context value and returns a node.', '\n', 'Or use useContext(Context) inside your component.');
+      hasWarnedAboutUsingUseContext = true;
+      return children;
+    }
+
+    return renderFunction(context.value);
+  };
+
+  return context;
+}
+},{"../framework":"framework/index.js","../utils":"utils.js"}],"framework/render.js":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.render = render;
+exports.default = void 0;
+
+var _element = require("./element");
+
+var _hooks = require("./hooks");
+
+// /** @jsx createElement */
+// /** @jsxFrag createFragment */
+// import { createElement } from './element';
+// let Component, Target;
+// export function render(componentFunction = null, targetElement = null) {
+//   if (componentFunction) Component = componentFunction;
+//   if (targetElement) Target = targetElement;
+//   // if (firstLoad) {
+//   //   firstLoad = false;
+//   //   startApp();
+//   // }
+//   // Target.innerHTML = '';
+//   // Target.appendChild(<Component />);
+//   Target.replaceChildren(<Component />);
+// }
+
+/** @jsx createElement */
+
+/*** @jsxFrag createFragment */
+
+/**
+ * Renders a component and attaches it to the target DOM element
+ * @param Component - function
+ * @param target - DOM element to attach component to
+ */
+var timer;
+
+function render(Component, target) {
+  function workLoop() {
+    if (_hooks.current.shouldReRender) {
+      _hooks.current.shouldReRender = false;
+      target.replaceChildren((0, _element.createElement)(Component, null));
+    }
+
+    cancelAnimationFrame(timer);
+    timer = requestAnimationFrame(workLoop);
+  }
+
+  timer = requestAnimationFrame(workLoop);
+}
+
+var _default = render;
+exports.default = _default;
+},{"./element":"framework/element.js","./hooks":"framework/hooks.js"}],"framework/index.js":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var _element = require("./element");
+
+Object.keys(_element).forEach(function (key) {
+  if (key === "default" || key === "__esModule") return;
+  if (key in exports && exports[key] === _element[key]) return;
+  Object.defineProperty(exports, key, {
+    enumerable: true,
+    get: function () {
+      return _element[key];
+    }
+  });
+});
+
+var _context = require("./context");
+
+Object.keys(_context).forEach(function (key) {
+  if (key === "default" || key === "__esModule") return;
+  if (key in exports && exports[key] === _context[key]) return;
+  Object.defineProperty(exports, key, {
+    enumerable: true,
+    get: function () {
+      return _context[key];
+    }
+  });
+});
+
+var _hooks = require("./hooks");
+
+Object.keys(_hooks).forEach(function (key) {
+  if (key === "default" || key === "__esModule") return;
+  if (key in exports && exports[key] === _hooks[key]) return;
+  Object.defineProperty(exports, key, {
+    enumerable: true,
+    get: function () {
+      return _hooks[key];
+    }
+  });
+});
+
+var _render = require("./render");
+
+Object.keys(_render).forEach(function (key) {
+  if (key === "default" || key === "__esModule") return;
+  if (key in exports && exports[key] === _render[key]) return;
+  Object.defineProperty(exports, key, {
+    enumerable: true,
+    get: function () {
+      return _render[key];
+    }
+  });
+});
+},{"./element":"framework/element.js","./context":"framework/context.js","./hooks":"framework/hooks.js","./render":"framework/render.js"}],"../node_modules/parcel-bundler/src/builtins/bundle-url.js":[function(require,module,exports) {
 var bundleURL = null;
 
 function getBundleURLCached() {
@@ -302,125 +604,7 @@ module.exports = {
   "tr": "_tr_4e88b",
   "sortingIcon": "_sortingIcon_4e88b"
 };
-},{"_css_loader":"../node_modules/parcel-bundler/src/builtins/css-loader.js"}],"data/coinsAPI.js":[function(require,module,exports) {
-"use strict";
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.default = getCoinsUrl;
-
-function getCoinsUrl() {
-  return `https://min-api.cryptocompare.com/data/pricemultifull?fsyms=BTC,ETH,XRP,ADA&tsyms=USD,EUR&api_key={${"58dad23bc03ae4827e7993c03cf6888bc092a3b5f70ed744adea2dbfcbc60dfd"}}`;
-}
-},{}],"data/coinsData.js":[function(require,module,exports) {
-"use strict";
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.default = startApp;
-
-var _coinsAPI = _interopRequireDefault(require("./coinsAPI"));
-
-var _render = _interopRequireDefault(require("../framework/render"));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-const rearengeData = coinsDataDisplay => {
-  let coinsDataUpd = [];
-
-  for (let coin in coinsDataDisplay) {
-    for (let fiat in coinsDataDisplay[coin]) {
-      coinsDataDisplay[coin][fiat]['coinName'] = window.dataStorage.coinsDataRaw[coin][fiat]['FROMSYMBOL'];
-      coinsDataDisplay[coin][fiat]['coinPrice'] = window.dataStorage.coinsDataRaw[coin][fiat]['PRICE'];
-      coinsDataDisplay[coin][fiat]['coinChange'] = window.dataStorage.coinsDataRaw[coin][fiat]['CHANGEPCTDAY'];
-      coinsDataDisplay[coin][fiat]['coinCap'] = window.dataStorage.coinsDataRaw[coin][fiat]['MKTCAP'];
-      coinsDataDisplay[coin][fiat]['coinVolume'] = window.dataStorage.coinsDataRaw[coin][fiat]['VOLUMEDAYTO'];
-    }
-
-    coinsDataUpd.push(coinsDataDisplay[coin]);
-  }
-
-  window.dataStorage.coinsDataUpd = coinsDataUpd;
-};
-
-const loadData = url => {
-  window.dataStorage.isDataLoading = true;
-  (0, _render.default)();
-  window.dataStorage.error = null;
-  return fetch(url).then(response => response.json()).then(data => {
-    window.dataStorage.isDataLoading = false;
-    window.dataStorage.coinsDataDisplay = data['DISPLAY'];
-    window.dataStorage.coinsDataRaw = data['RAW'];
-    rearengeData(window.dataStorage.coinsDataDisplay);
-  }).catch(error => {
-    window.dataStore.error = error;
-    return Promise.resolve({});
-  });
-};
-
-const getAvailablePairs = () => {
-  const {
-    coinsDataDisplay,
-    availableFiats,
-    availableCoins
-  } = window.dataStorage;
-  let findFirst = 0;
-
-  for (let coin in coinsDataDisplay) {
-    availableCoins.push(coin);
-
-    for (let fiat in coinsDataDisplay[coin]) {
-      if (!findFirst) {
-        availableFiats.push(fiat);
-      }
-    }
-
-    findFirst = 1;
-  }
-};
-
-function startApp() {
-  const url = (0, _coinsAPI.default)();
-  loadData(url).then(() => {
-    getAvailablePairs();
-    (0, _render.default)();
-  });
-}
-},{"./coinsAPI":"data/coinsAPI.js","../framework/render":"framework/render.js"}],"framework/render.js":[function(require,module,exports) {
-"use strict";
-
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.default = renderApp;
-
-var _element = require("./element");
-
-var _coinsData = _interopRequireDefault(require("../data/coinsData"));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-/** @jsx createElement */
-
-/** @jsxFrag createFragment */
-let Component, Target;
-let firstLoad = true;
-
-function renderApp(componentFunction = null, targetElement = null) {
-  if (componentFunction) Component = componentFunction;
-  if (targetElement) Target = targetElement;
-
-  if (firstLoad) {
-    firstLoad = false;
-    (0, _coinsData.default)();
-  }
-
-  Target.innerHTML = '';
-  Target.appendChild((0, _element.createElement)(Component, null));
-}
-},{"./element":"framework/element.js","../data/coinsData":"data/coinsData.js"}],"components/SelectFiat.js":[function(require,module,exports) {
+},{"_css_loader":"../node_modules/parcel-bundler/src/builtins/css-loader.js"}],"components/SelectFiat.js":[function(require,module,exports) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -428,9 +612,7 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.default = SelectFiat;
 
-var _element = require("../framework/element");
-
-var _render = _interopRequireDefault(require("../framework/render"));
+var _framework = require("../framework");
 
 var _styles = _interopRequireDefault(require("../styles.css"));
 
@@ -439,33 +621,34 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 /** @jsx createElement */
 
 /** @jsxFrag createFragment */
-const updateFiatCurrency = selectedFiat => {
-  window.dataStorage['activeFiat'] = selectedFiat;
-  (0, _render.default)();
+var updateFiatCurrency = function updateFiatCurrency(selectedFiat, updateActiveFiat) {
+  updateActiveFiat(selectedFiat);
+  (0, _framework.render)();
 };
 
-function SelectFiat() {
-  const {
-    activeFiat,
-    availableFiats
-  } = window.dataStorage;
-  return (0, _element.createElement)("select", {
+function SelectFiat(_ref) {
+  var availableFiats = _ref.availableFiats,
+      activeFiat = _ref.activeFiat,
+      updateActiveFiat = _ref.updateActiveFiat;
+  return (0, _framework.createElement)("select", {
     class: _styles.default.coinToFiatSelect,
-    onchange: e => updateFiatCurrency(e.target.value)
-  }, availableFiats.map(fiat => {
+    onchange: function onchange(e) {
+      return updateFiatCurrency(e.target.value, updateActiveFiat);
+    }
+  }, availableFiats.map(function (fiat) {
     if (fiat === activeFiat) {
-      return (0, _element.createElement)("option", {
+      return (0, _framework.createElement)("option", {
         value: fiat,
         selected: true
       }, fiat);
     } else {
-      return (0, _element.createElement)("option", {
+      return (0, _framework.createElement)("option", {
         value: fiat
       }, fiat);
     }
   }));
 }
-},{"../framework/element":"framework/element.js","../framework/render":"framework/render.js","../styles.css":"styles.css"}],"components/Filters.js":[function(require,module,exports) {
+},{"../framework":"framework/index.js","../styles.css":"styles.css"}],"components/Filters.js":[function(require,module,exports) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -473,12 +656,10 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.default = Filters;
 
-var _render = _interopRequireDefault(require("../framework/render"));
+var _framework = require("../framework");
 
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function Filters(activeElement) {
-  const filters = [{
+function Filters(activeElement, coinsDataUpd, activeFiat, setActiveFilter, setFilteredArr) {
+  var filters = [{
     filterName: 'asset',
     value: 'coinName'
   }, {
@@ -494,38 +675,39 @@ function Filters(activeElement) {
     filterName: 'volume',
     value: 'coinVolume'
   }];
-  let filteredArr = [];
-  let activeFilterName;
-  const {
-    coinsDataDisplay,
-    coinsDataUpd,
-    activeFiat
-  } = window.dataStorage;
-  const activeElementFilter = activeElement.getAttribute('data-filter');
-  filters.map(elem => {
+  var filteredArr = [];
+  var activeFilterName;
+  var activeElementFilter = activeElement.getAttribute('data-filter');
+  filters.map(function (elem) {
     if (elem['filterName'] === activeElementFilter) activeFilterName = elem['value'];
   });
 
   if (!activeElement.classList.contains('active')) {
-    document.querySelectorAll('div[data-filter]').forEach(elem => elem.classList.remove('active', 'up', 'down'));
+    document.querySelectorAll('div[data-filter]').forEach(function (elem) {
+      return elem.classList.remove('active', 'up', 'down');
+    });
     activeElement.classList.add('active');
   }
 
-  const formatNumberValue = number => {
-    let numberValue = number.replace(/^\D+/g, '');
+  var formatNumberValue = function formatNumberValue(number) {
+    var numberValue = number.replace(/^\D+/g, '');
     numberValue = numberValue.replace(/,/g, '');
     return numberValue;
   };
 
-  for (let data in coinsDataUpd) {
+  for (var data in coinsDataUpd) {
     if (activeFilterName === 'coinName') {
-      filteredArr = coinsDataUpd.sort((a, b) => a[activeFiat][activeFilterName].localeCompare(b[activeFiat][activeFilterName]));
+      filteredArr = coinsDataUpd.sort(function (a, b) {
+        return a[activeFiat][activeFilterName].localeCompare(b[activeFiat][activeFilterName]);
+      });
     } else {
-      filteredArr = coinsDataUpd.sort((a, b) => a[activeFiat][activeFilterName] - b[activeFiat][activeFilterName]);
+      filteredArr = coinsDataUpd.sort(function (a, b) {
+        return a[activeFiat][activeFilterName] - b[activeFiat][activeFilterName];
+      });
     }
   }
 
-  let classes = [];
+  var classes = [];
 
   if (activeElement.classList.contains('up')) {
     activeElement.classList.remove('up');
@@ -540,14 +722,14 @@ function Filters(activeElement) {
     classes.push('active', 'up');
   }
 
-  window.dataStorage.activeFilter = {
+  setActiveFilter({
     attr: activeElement.getAttribute('data-filter'),
     classes: classes
-  };
-  window.dataStorage.filteredArr = filteredArr;
-  (0, _render.default)();
+  });
+  setFilteredArr(filteredArr);
+  (0, _framework.render)();
 }
-},{"../framework/render":"framework/render.js"}],"components/CoinsTable.js":[function(require,module,exports) {
+},{"../framework":"framework/index.js"}],"components/CoinsTable.js":[function(require,module,exports) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -555,7 +737,7 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.default = CoinsTable;
 
-var _element = require("../framework/element");
+var _framework = require("../framework");
 
 var _styles = _interopRequireDefault(require("../styles.css"));
 
@@ -565,12 +747,48 @@ var _Filters = _interopRequireDefault(require("./Filters"));
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-/** @jsx createElement */
+function _slicedToArray(arr, i) { return _arrayWithHoles(arr) || _iterableToArrayLimit(arr, i) || _unsupportedIterableToArray(arr, i) || _nonIterableRest(); }
 
-/** @jsxFrag createFragment */
-function CoinsTable() {
-  const GenerateCoinsTableHeader = () => {
-    const headers = [{
+function _nonIterableRest() { throw new TypeError("Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
+
+function _unsupportedIterableToArray(o, minLen) { if (!o) return; if (typeof o === "string") return _arrayLikeToArray(o, minLen); var n = Object.prototype.toString.call(o).slice(8, -1); if (n === "Object" && o.constructor) n = o.constructor.name; if (n === "Map" || n === "Set") return Array.from(o); if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return _arrayLikeToArray(o, minLen); }
+
+function _arrayLikeToArray(arr, len) { if (len == null || len > arr.length) len = arr.length; for (var i = 0, arr2 = new Array(len); i < len; i++) { arr2[i] = arr[i]; } return arr2; }
+
+function _iterableToArrayLimit(arr, i) { if (typeof Symbol === "undefined" || !(Symbol.iterator in Object(arr))) return; var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"] != null) _i["return"](); } finally { if (_d) throw _e; } } return _arr; }
+
+function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
+
+function CoinsTable(_ref) {
+  var error = _ref.error,
+      isDataLoading = _ref.isDataLoading,
+      availableFiats = _ref.availableFiats,
+      coinsDataUpd = _ref.coinsDataUpd;
+
+  var _useState = (0, _framework.useState)('USD'),
+      _useState2 = _slicedToArray(_useState, 2),
+      activeFiat = _useState2[0],
+      setActiveFiat = _useState2[1];
+
+  var _useState3 = (0, _framework.useState)(null),
+      _useState4 = _slicedToArray(_useState3, 2),
+      filteredArr = _useState4[0],
+      setFilteredArr = _useState4[1];
+
+  var _useState5 = (0, _framework.useState)({
+    attr: '',
+    classes: []
+  }),
+      _useState6 = _slicedToArray(_useState5, 2),
+      activeFilter = _useState6[0],
+      setActiveFilter = _useState6[1];
+
+  var updateActiveFiat = function updateActiveFiat(fiat) {
+    setActiveFiat(fiat);
+  };
+
+  var GenerateCoinsTableHeader = function GenerateCoinsTableHeader() {
+    var headers = [{
       title: 'Asset',
       filter: 'asset'
     }, {
@@ -586,94 +804,240 @@ function CoinsTable() {
       title: 'Total Exchange Volume',
       filter: 'volume'
     }];
-    return (0, _element.createElement)("div", {
-      class: `thead ${_styles.default.thead}`
-    }, (0, _element.createElement)("div", {
+    return (0, _framework.createElement)("div", {
+      class: "thead ".concat(_styles.default.thead)
+    }, (0, _framework.createElement)("div", {
       class: _styles.default.tr
-    }, headers.map(elem => {
-      return (0, _element.createElement)("div", {
-        class: `${_styles.default.th} ${elem.filter === window.dataStorage.activeFilter['attr'] ? window.dataStorage.activeFilter['classes'][0] : ''} ${elem.filter === window.dataStorage.activeFilter['attr'] ? window.dataStorage.activeFilter['classes'][1] : ''}`,
-        onclick: e => (0, _Filters.default)(e.currentTarget),
+    }, headers.map(function (elem) {
+      return (0, _framework.createElement)("div", {
+        class: "".concat(_styles.default.th, " ").concat(elem.filter === activeFilter['attr'] ? activeFilter['classes'][0] : '', " ").concat(elem.filter === activeFilter['attr'] ? activeFilter['classes'][1] : ''),
+        onclick: function onclick(e) {
+          return (0, _Filters.default)(e.currentTarget, coinsDataUpd, activeFiat, setActiveFilter, setFilteredArr);
+        },
         "data-filter": elem.filter
-      }, (0, _element.createElement)("i", {
+      }, (0, _framework.createElement)("i", {
         class: _styles.default.sortingIcon
-      }), (0, _element.createElement)("span", null, elem.title));
+      }), (0, _framework.createElement)("span", null, elem.title));
     })));
   };
 
-  const GenerateCoinsTable = ({
-    coinData
-  }) => {
-    const {
-      activeFiat
-    } = window.dataStorage;
-    const {
-      PRICE,
-      CHANGEPCTDAY,
-      VOLUMEDAYTO,
-      MKTCAP,
-      coinName
-    } = coinData[activeFiat];
-    let changePctDay_HTML;
+  var GenerateCoinsTable = function GenerateCoinsTable(_ref2) {
+    var coinData = _ref2.coinData;
+    var _coinData$activeFiat = coinData[activeFiat],
+        PRICE = _coinData$activeFiat.PRICE,
+        CHANGEPCTDAY = _coinData$activeFiat.CHANGEPCTDAY,
+        VOLUMEDAYTO = _coinData$activeFiat.VOLUMEDAYTO,
+        MKTCAP = _coinData$activeFiat.MKTCAP,
+        coinName = _coinData$activeFiat.coinName;
+    var changePctDay_HTML;
 
     if (CHANGEPCTDAY >= 0) {
-      changePctDay_HTML = (0, _element.createElement)("span", {
+      changePctDay_HTML = (0, _framework.createElement)("span", {
         class: _styles.default.green
       }, "+", CHANGEPCTDAY, "%");
     } else {
-      changePctDay_HTML = (0, _element.createElement)("span", {
+      changePctDay_HTML = (0, _framework.createElement)("span", {
         class: _styles.default.red
       }, "-", CHANGEPCTDAY, "%");
     }
 
-    return (0, _element.createElement)(_element.createFragment, null, (0, _element.createElement)("div", {
+    return (0, _framework.createElement)(_framework.createFragment, null, (0, _framework.createElement)("div", {
       class: _styles.default.td
-    }, (0, _element.createElement)("b", null, coinName)), (0, _element.createElement)("div", {
+    }, (0, _framework.createElement)("b", null, coinName)), (0, _framework.createElement)("div", {
       class: _styles.default.td
-    }, (0, _element.createElement)("b", null, PRICE)), (0, _element.createElement)("div", {
+    }, (0, _framework.createElement)("b", null, PRICE)), (0, _framework.createElement)("div", {
       class: _styles.default.td
-    }, (0, _element.createElement)("b", null, changePctDay_HTML)), (0, _element.createElement)("div", {
+    }, (0, _framework.createElement)("b", null, changePctDay_HTML)), (0, _framework.createElement)("div", {
       class: _styles.default.td
-    }, (0, _element.createElement)("b", null, MKTCAP)), (0, _element.createElement)("div", {
+    }, (0, _framework.createElement)("b", null, MKTCAP)), (0, _framework.createElement)("div", {
       class: _styles.default.td
-    }, (0, _element.createElement)("b", null, VOLUMEDAYTO)));
+    }, (0, _framework.createElement)("b", null, VOLUMEDAYTO)));
   };
 
-  const renderCoinsTable = () => {
-    if (window.dataStorage.isDataLoading) {
-      return (0, _element.createElement)("div", {
-        class: _styles.default.loading
-      }, "Data is loading");
-    }
-
-    const {
-      coinsDataDisplay,
-      coinsDataUpd,
-      availableFiats,
-      filteredArr,
-      activeFiat
-    } = window.dataStorage;
-    let actualData = coinsDataUpd;
+  var RenderCoinsTable = function RenderCoinsTable() {
+    var actualData = coinsDataUpd;
     if (filteredArr) actualData = filteredArr;
-    return (0, _element.createElement)("div", {
-      class: _styles.default.coins
-    }, (0, _element.createElement)(_SelectFiat.default, null), (0, _element.createElement)("div", {
+    return (0, _framework.createElement)("div", {
       class: _styles.default.coinsTable
-    }, (0, _element.createElement)(GenerateCoinsTableHeader, null), (0, _element.createElement)("div", {
+    }, (0, _framework.createElement)(GenerateCoinsTableHeader, null), (0, _framework.createElement)("div", {
       class: _styles.default.tbody
-    }, actualData.map(coin => {
-      return (0, _element.createElement)("div", {
+    }, actualData.map(function (coin) {
+      return (0, _framework.createElement)("div", {
         class: _styles.default.tr,
         id: coin[activeFiat]['coinName']
-      }, (0, _element.createElement)(GenerateCoinsTable, {
+      }, (0, _framework.createElement)(GenerateCoinsTable, {
         coinData: coin
       }));
-    }))));
+    })));
   };
 
-  return renderCoinsTable();
+  if (isDataLoading) {
+    return (0, _framework.createElement)("div", null, "Loading...");
+  }
+
+  if (error) {
+    return (0, _framework.createElement)("div", null, error);
+  }
+
+  return (0, _framework.createElement)("div", {
+    class: _styles.default.coins
+  }, (0, _framework.createElement)(_SelectFiat.default, {
+    availableFiats: availableFiats,
+    activeFiat: activeFiat,
+    updateActiveFiat: updateActiveFiat
+  }), (0, _framework.createElement)(RenderCoinsTable, null));
 }
-},{"../framework/element":"framework/element.js","../styles.css":"styles.css","./SelectFiat":"components/SelectFiat.js","./Filters":"components/Filters.js"}],"components/App.js":[function(require,module,exports) {
+},{"../framework":"framework/index.js","../styles.css":"styles.css","./SelectFiat":"components/SelectFiat.js","./Filters":"components/Filters.js"}],"data/coinsAPI.js":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.default = getCoinsUrl;
+
+function getCoinsUrl() {
+  return "https://min-api.cryptocompare.com/data/pricemultifull?fsyms=BTC,ETH,XRP,ADA&tsyms=USD,EUR&api_key={".concat("58dad23bc03ae4827e7993c03cf6888bc092a3b5f70ed744adea2dbfcbc60dfd", "}");
+}
+},{}],"data/coinsData.js":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.getAvailablePairs = exports.loadData = void 0;
+
+var _coinsAPI = _interopRequireDefault(require("./coinsAPI"));
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+var url = (0, _coinsAPI.default)();
+var coinsDataDisplay = [];
+var coinsDataUpd = [];
+var coinsDataRaw = [];
+
+var rearengeData = function rearengeData(coinsDataDisplay) {
+  for (var coin in coinsDataDisplay) {
+    for (var fiat in coinsDataDisplay[coin]) {
+      coinsDataDisplay[coin][fiat]['coinName'] = coinsDataRaw[coin][fiat]['FROMSYMBOL'];
+      coinsDataDisplay[coin][fiat]['coinPrice'] = coinsDataRaw[coin][fiat]['PRICE'];
+      coinsDataDisplay[coin][fiat]['coinChange'] = coinsDataRaw[coin][fiat]['CHANGEPCTDAY'];
+      coinsDataDisplay[coin][fiat]['coinCap'] = coinsDataRaw[coin][fiat]['MKTCAP'];
+      coinsDataDisplay[coin][fiat]['coinVolume'] = coinsDataRaw[coin][fiat]['VOLUMEDAYTO'];
+    }
+
+    coinsDataUpd.push(coinsDataDisplay[coin]);
+  }
+
+  return coinsDataUpd;
+};
+
+var loadData = function loadData() {
+  return fetch(url).then(function (response) {
+    return response.json();
+  }).then(function (data) {
+    coinsDataDisplay = data['DISPLAY'];
+    coinsDataRaw = data['RAW'];
+    return rearengeData(coinsDataDisplay);
+  }).catch(function (error) {
+    return error;
+  });
+};
+
+exports.loadData = loadData;
+
+var getAvailablePairs = function getAvailablePairs() {
+  var findFirst = 0;
+  var result = {
+    coin: [],
+    fiat: []
+  };
+
+  for (var coin in coinsDataDisplay) {
+    result['coin'].push(coin);
+
+    for (var fiat in coinsDataDisplay[coin]) {
+      if (!findFirst) {
+        result['fiat'].push(fiat);
+      }
+    }
+
+    findFirst = 1;
+  }
+
+  return result;
+};
+
+exports.getAvailablePairs = getAvailablePairs;
+},{"./coinsAPI":"data/coinsAPI.js"}],"data/customHooks.js":[function(require,module,exports) {
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.default = useCoins;
+
+var _framework = require("../framework");
+
+var _coinsData = require("./coinsData");
+
+function _slicedToArray(arr, i) { return _arrayWithHoles(arr) || _iterableToArrayLimit(arr, i) || _unsupportedIterableToArray(arr, i) || _nonIterableRest(); }
+
+function _nonIterableRest() { throw new TypeError("Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
+
+function _unsupportedIterableToArray(o, minLen) { if (!o) return; if (typeof o === "string") return _arrayLikeToArray(o, minLen); var n = Object.prototype.toString.call(o).slice(8, -1); if (n === "Object" && o.constructor) n = o.constructor.name; if (n === "Map" || n === "Set") return Array.from(o); if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return _arrayLikeToArray(o, minLen); }
+
+function _arrayLikeToArray(arr, len) { if (len == null || len > arr.length) len = arr.length; for (var i = 0, arr2 = new Array(len); i < len; i++) { arr2[i] = arr[i]; } return arr2; }
+
+function _iterableToArrayLimit(arr, i) { if (typeof Symbol === "undefined" || !(Symbol.iterator in Object(arr))) return; var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"] != null) _i["return"](); } finally { if (_d) throw _e; } } return _arr; }
+
+function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
+
+function useCoins() {
+  var _useState = (0, _framework.useState)([]),
+      _useState2 = _slicedToArray(_useState, 2),
+      coinsDataUpd = _useState2[0],
+      setCoinsDataUpd = _useState2[1];
+
+  var _useState3 = (0, _framework.useState)([]),
+      _useState4 = _slicedToArray(_useState3, 2),
+      availableCoins = _useState4[0],
+      setAvailableCoins = _useState4[1];
+
+  var _useState5 = (0, _framework.useState)([]),
+      _useState6 = _slicedToArray(_useState5, 2),
+      availableFiats = _useState6[0],
+      setAvailableFiats = _useState6[1];
+
+  var _useState7 = (0, _framework.useState)(true),
+      _useState8 = _slicedToArray(_useState7, 2),
+      isDataLoading = _useState8[0],
+      setIsDataLoading = _useState8[1];
+
+  var _useState9 = (0, _framework.useState)(null),
+      _useState10 = _slicedToArray(_useState9, 2),
+      error = _useState10[0],
+      setError = _useState10[1];
+
+  (0, _framework.useEffect)(function () {
+    (0, _coinsData.loadData)().then(function (data) {
+      var message = data.message,
+          code = data.code;
+      if (code !== '200' && message) throw Error(message);
+      setError(null);
+      setCoinsDataUpd(data);
+      setAvailableFiats((0, _coinsData.getAvailablePairs)()['fiat']);
+    }).catch(setError).finally(function () {
+      setIsDataLoading(false);
+    });
+  }, []);
+  return {
+    coinsDataUpd: coinsDataUpd,
+    error: error,
+    isDataLoading: isDataLoading,
+    availableFiats: availableFiats
+  };
+}
+},{"../framework":"framework/index.js","./coinsData":"data/coinsData.js"}],"components/App.js":[function(require,module,exports) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -681,9 +1045,11 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.default = App;
 
-var _element = require("../framework/element");
+var _framework = require("../framework");
 
 var _CoinsTable = _interopRequireDefault(require("./CoinsTable"));
+
+var _customHooks = _interopRequireDefault(require("../data/customHooks"));
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -691,47 +1057,35 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 
 /** @jsxFrag createFragment */
 function App() {
-  return (0, _element.createElement)(_CoinsTable.default, null);
+  var _useCoins = (0, _customHooks.default)(),
+      coinsDataUpd = _useCoins.coinsDataUpd,
+      error = _useCoins.error,
+      isDataLoading = _useCoins.isDataLoading,
+      availableFiats = _useCoins.availableFiats;
+
+  return (0, _framework.createElement)(_CoinsTable.default, {
+    error: error,
+    isDataLoading: isDataLoading,
+    availableFiats: availableFiats,
+    coinsDataUpd: coinsDataUpd
+  });
 }
-},{"../framework/element":"framework/element.js","./CoinsTable":"components/CoinsTable.js"}],"data/dataStore.js":[function(require,module,exports) {
+},{"../framework":"framework/index.js","./CoinsTable":"components/CoinsTable.js","../data/customHooks":"data/customHooks.js"}],"index.js":[function(require,module,exports) {
 "use strict";
 
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-exports.default = void 0;
-const dataStore = {
-  availableFiats: [],
-  availableCoins: [],
-  activeFiat: 'USD',
-  isDataLoading: false,
-  error: null,
-  activeFilter: {
-    attr: '',
-    classes: []
-  }
-};
-var _default = dataStore;
-exports.default = _default;
-},{}],"index.js":[function(require,module,exports) {
-"use strict";
+var _framework = require("./framework");
 
 var _App = _interopRequireDefault(require("./components/App"));
 
-var _render = _interopRequireDefault(require("./framework/render"));
-
-var _dataStore = _interopRequireDefault(require("./data/dataStore"));
-
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-// Start from here
 if (module.hot) {
   module.hot.accept();
-}
+} // pass a component function itself so that `render` could invoke it as needed
 
-window.dataStorage = _dataStore.default;
-(0, _render.default)(_App.default, document.getElementById('app-root'));
-},{"./components/App":"components/App.js","./framework/render":"framework/render.js","./data/dataStore":"data/dataStore.js"}],"../node_modules/parcel-bundler/src/builtins/hmr-runtime.js":[function(require,module,exports) {
+
+(0, _framework.render)(_App.default, document.getElementById('app-root'));
+},{"./framework":"framework/index.js","./components/App":"components/App.js"}],"../node_modules/parcel-bundler/src/builtins/hmr-runtime.js":[function(require,module,exports) {
 var global = arguments[3];
 var OVERLAY_ID = '__parcel__error__overlay__';
 var OldModule = module.bundle.Module;
@@ -759,7 +1113,7 @@ var parent = module.bundle.parent;
 if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
   var hostname = "" || location.hostname;
   var protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-  var ws = new WebSocket(protocol + '://' + hostname + ':' + "62963" + '/');
+  var ws = new WebSocket(protocol + '://' + hostname + ':' + "56720" + '/');
 
   ws.onmessage = function (event) {
     checkedAssets = {};
