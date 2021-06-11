@@ -8,7 +8,9 @@ export default function useCoins() {
   const [isDataLoading, setIsDataLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
+  const TEN_SEC_MS = 10000;
+
+  function getData() {
     loadData()
       .then(data => {
         const { message, code } = data;
@@ -23,6 +25,15 @@ export default function useCoins() {
       .finally(() => {
         setIsDataLoading(false);
       });
+  }
+
+  useEffect(() => {
+    getData();
+    const interval = setInterval(() => {
+      getData();
+    }, TEN_SEC_MS);
+
+    return () => clearInterval(interval); // This represents the unmount function, in which need to clear interval to prevent memory leaks.
   }, []);
 
   return {

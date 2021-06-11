@@ -2,10 +2,10 @@ import getCoinsUrl from './coinsAPI';
 
 const url = getCoinsUrl();
 let coinsDataDisplay = [];
-let coinsDataUpd = [];
 let coinsDataRaw = [];
 
 const rearengeData = coinsDataDisplay => {
+  let coinsDataUpd = [];
   for (let coin in coinsDataDisplay) {
     for (let fiat in coinsDataDisplay[coin]) {
       coinsDataDisplay[coin][fiat]['coinName'] = coinsDataRaw[coin][fiat]['FROMSYMBOL'];
