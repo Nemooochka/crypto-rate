@@ -1,31 +1,23 @@
-/** @jsx createElement */
-/** @jsxFrag createFragment */
-import { createElement, createFragment, render } from '../framework';
+import React from 'react';
 
 import styles from '../styles.css';
 
 const updateFiatCurrency = (selectedFiat, updateActiveFiat) => {
   updateActiveFiat(selectedFiat);
-  render();
 };
 
 export default function SelectFiat({ availableFiats, activeFiat, updateActiveFiat }) {
   return (
     <select
-      class={styles.coinToFiatSelect}
-      onchange={e => updateFiatCurrency(e.target.value, updateActiveFiat)}
+      className={styles.coinToFiatSelect}
+      defaultValue={activeFiat}
+      onChange={e => updateFiatCurrency(e.target.value, updateActiveFiat)}
     >
-      {availableFiats.map(fiat => {
-        if (fiat === activeFiat) {
-          return (
-            <option value={fiat} selected>
-              {fiat}
-            </option>
-          );
-        } else {
-          return <option value={fiat}>{fiat}</option>;
-        }
-      })}
+      {availableFiats.map((fiat, index) => (
+        <option value={fiat} key={index}>
+          {fiat}
+        </option>
+      ))}
     </select>
   );
 }

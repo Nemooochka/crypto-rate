@@ -1,4 +1,4 @@
-import { render } from '../framework';
+import React from 'react';
 
 export default function Filters(
   activeElement,
@@ -84,6 +84,4 @@ export default function Filters(
   });
 
   setFilteredArr(filteredArr);
-
-  render();
 }

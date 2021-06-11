@@ -1,8 +1,6 @@
-/** @jsx createElement */
-/** @jsxFrag createFragment */
-import { createElement, createFragment } from '../framework';
+import React from 'react';
 import CoinsTable from './CoinsTable';
-import useCoins from '../data/customHooks';
+import useCoins from '../customHooks';
 
 export default function App() {
   const { coinsDataUpd, error, isDataLoading, availableFiats } = useCoins();
