@@ -1,6 +1,6 @@
 import React from 'react';
 
-export default function Filters(
+export default function filters(
   activeElement,
   coinsDataUpd,
   activeFiat,
@@ -31,57 +31,62 @@ export default function Filters(
   ];
 
   let filteredArr = [];
-  let activeFilterName;
+  let classes = [];
 
-  const activeElementFilter = activeElement.getAttribute('data-filter');
-  filters.map(elem => {
-    if (elem['filterName'] === activeElementFilter) activeFilterName = elem['value'];
-  });
+  const getActiveFilter = () => {
+    const activeElementFilter = activeElement.getAttribute('data-filter');
 
-  if (!activeElement.classList.contains('active')) {
-    document
-      .querySelectorAll('div[data-filter]')
-      .forEach(elem => elem.classList.remove('active', 'up', 'down'));
-    activeElement.classList.add('active');
-  }
-
-  const formatNumberValue = number => {
-    let numberValue = number.replace(/^\D+/g, '');
-    numberValue = numberValue.replace(/,/g, '');
-
-    return numberValue;
+    return filters.find(elem => {
+      return elem.filterName === activeElementFilter;
+    }).value;
   };
 
-  for (let data in coinsDataUpd) {
-    if (activeFilterName === 'coinName') {
-      filteredArr = coinsDataUpd.sort((a, b) =>
-        a[activeFiat][activeFilterName].localeCompare(b[activeFiat][activeFilterName]),
-      );
-    } else {
-      filteredArr = coinsDataUpd.sort(
-        (a, b) => a[activeFiat][activeFilterName] - b[activeFiat][activeFilterName],
-      );
+  const updateActiveElement = () => {
+    if (!activeElement.classList.contains('active')) {
+      document
+        .querySelectorAll('div[data-filter]')
+        .forEach(elem => elem.classList.remove('active', 'up', 'down'));
+      activeElement.classList.add('active');
     }
-  }
+  };
 
-  let classes = [];
-  if (activeElement.classList.contains('up')) {
-    activeElement.classList.remove('up');
-    activeElement.classList.add('down');
-    classes = [];
-    classes.push('active', 'down');
-    filteredArr.reverse();
-  } else {
-    activeElement.classList.remove('down');
-    activeElement.classList.add('up');
-    classes = [];
-    classes.push('active', 'up');
-  }
+  const sortData = dataArray => {
+    const activeFilterName = getActiveFilter();
 
+    for (let data in dataArray) {
+      if (activeFilterName === 'coinName') {
+        filteredArr = dataArray.sort((a, b) =>
+          a[activeFiat][activeFilterName].localeCompare(b[activeFiat][activeFilterName]),
+        );
+      } else {
+        filteredArr = dataArray.sort(
+          (a, b) => a[activeFiat][activeFilterName] - b[activeFiat][activeFilterName],
+        );
+      }
+    }
+  };
+
+  const updateClasses = () => {
+    if (activeElement.classList.contains('up')) {
+      activeElement.classList.remove('up');
+      activeElement.classList.add('down');
+      classes = [];
+      classes.push('active', 'down');
+      filteredArr.reverse();
+    } else {
+      activeElement.classList.remove('down');
+      activeElement.classList.add('up');
+      classes = [];
+      classes.push('active', 'up');
+    }
+  };
+
+  sortData(coinsDataUpd);
+  updateClasses();
+  updateActiveElement();
   setActiveFilter({
     attr: activeElement.getAttribute('data-filter'),
     classes: classes,
   });
-
   setFilteredArr(filteredArr);
 }
