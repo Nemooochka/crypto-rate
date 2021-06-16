@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import styles from '../styles.css';
 
 import SelectFiat from './SelectFiat';
-import Filters from './Filters';
+import filters from './filters';
 
 export default function CoinsTable({ error, isDataLoading, availableFiats, coinsDataUpd }) {
   const [activeFiat, setActiveFiat] = useState('USD');
@@ -17,7 +17,7 @@ export default function CoinsTable({ error, isDataLoading, availableFiats, coins
     setActiveFiat(fiat);
   };
 
-  const GenerateCoinsTableHeader = () => {
+  const CoinsTableHeader = () => {
     const headers = [
       {
         title: 'Asset',
@@ -46,14 +46,14 @@ export default function CoinsTable({ error, isDataLoading, availableFiats, coins
         <div className={styles.tr}>
           {headers.map((elem, index) => {
             return (
-              <div
+              <a
                 className={`${styles.th}
-                ${elem.filter === activeFilter['attr'] ? activeFilter['classes'][0] : ''} ${
-                  elem.filter === activeFilter['attr'] ? activeFilter['classes'][1] : ''
+                ${elem.filter === activeFilter.attr ? activeFilter.classes[0] : ''} ${
+                  elem.filter === activeFilter.attr ? activeFilter.classes[1] : ''
                 }`}
                 key={index}
                 onClick={e =>
-                  Filters(
+                  filters(
                     e.currentTarget,
                     coinsDataUpd,
                     activeFiat,
@@ -65,7 +65,7 @@ export default function CoinsTable({ error, isDataLoading, availableFiats, coins
               >
                 <i className={styles.sortingIcon}></i>
                 <span>{elem.title}</span>
-              </div>
+              </a>
             );
           })}
         </div>
@@ -73,14 +73,14 @@ export default function CoinsTable({ error, isDataLoading, availableFiats, coins
     );
   };
 
-  const GenerateCoinsTable = ({ coinData }) => {
+  const CoinsTableBodyRow = ({ coinData }) => {
     const { PRICE, CHANGEPCTDAY, VOLUMEDAYTO, MKTCAP, coinName } = coinData[activeFiat];
 
-    let changePctDay_HTML;
+    let percentChangeToday;
     if (CHANGEPCTDAY >= 0) {
-      changePctDay_HTML = <span className={styles.green}>+{CHANGEPCTDAY}%</span>;
+      percentChangeToday = <span className={styles.green}>+{CHANGEPCTDAY}%</span>;
     } else {
-      changePctDay_HTML = <span className={styles.red}>-{CHANGEPCTDAY}%</span>;
+      percentChangeToday = <span className={styles.red}>-{CHANGEPCTDAY}%</span>;
     }
 
     return (
@@ -92,7 +92,7 @@ export default function CoinsTable({ error, isDataLoading, availableFiats, coins
           <b>{PRICE}</b>
         </div>
         <div className={styles.td}>
-          <b>{changePctDay_HTML}</b>
+          <b>{percentChangeToday}</b>
         </div>
         <div className={styles.td}>
           <b>{MKTCAP}</b>
@@ -110,12 +110,12 @@ export default function CoinsTable({ error, isDataLoading, availableFiats, coins
 
     return (
       <div className={styles.coinsTable}>
-        <GenerateCoinsTableHeader />
+        <CoinsTableHeader />
         <div className={styles.tbody}>
           {actualData.map((coin, index) => {
             return (
-              <div className={styles.tr} key={index} id={coin[activeFiat]['coinName']}>
-                <GenerateCoinsTable coinData={coin} />
+              <div className={styles.tr} key={index} id={coin[activeFiat].coinName}>
+                <CoinsTableBodyRow coinData={coin} />
               </div>
             );
           })}

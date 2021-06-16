@@ -8,11 +8,11 @@ const rearengeData = coinsDataDisplay => {
   let coinsDataUpd = [];
   for (let coin in coinsDataDisplay) {
     for (let fiat in coinsDataDisplay[coin]) {
-      coinsDataDisplay[coin][fiat]['coinName'] = coinsDataRaw[coin][fiat]['FROMSYMBOL'];
-      coinsDataDisplay[coin][fiat]['coinPrice'] = coinsDataRaw[coin][fiat]['PRICE'];
-      coinsDataDisplay[coin][fiat]['coinChange'] = coinsDataRaw[coin][fiat]['CHANGEPCTDAY'];
-      coinsDataDisplay[coin][fiat]['coinCap'] = coinsDataRaw[coin][fiat]['MKTCAP'];
-      coinsDataDisplay[coin][fiat]['coinVolume'] = coinsDataRaw[coin][fiat]['VOLUMEDAYTO'];
+      coinsDataDisplay[coin][fiat].coinName = coinsDataRaw[coin][fiat].FROMSYMBOL;
+      coinsDataDisplay[coin][fiat].coinPrice = coinsDataRaw[coin][fiat].PRICE;
+      coinsDataDisplay[coin][fiat].coinChange = coinsDataRaw[coin][fiat].CHANGEPCTDAY;
+      coinsDataDisplay[coin][fiat].coinCap = coinsDataRaw[coin][fiat].MKTCAP;
+      coinsDataDisplay[coin][fiat].coinVolume = coinsDataRaw[coin][fiat].VOLUMEDAYTO;
     }
     coinsDataUpd.push(coinsDataDisplay[coin]);
   }
@@ -24,8 +24,8 @@ export const loadData = () => {
   return fetch(url)
     .then(response => response.json())
     .then(data => {
-      coinsDataDisplay = data['DISPLAY'];
-      coinsDataRaw = data['RAW'];
+      coinsDataDisplay = data.DISPLAY;
+      coinsDataRaw = data.RAW;
       return rearengeData(coinsDataDisplay);
     })
     .catch(error => error);
@@ -38,10 +38,10 @@ export const getAvailablePairs = () => {
     fiat: [],
   };
   for (let coin in coinsDataDisplay) {
-    result['coin'].push(coin);
+    result.coin.push(coin);
     for (let fiat in coinsDataDisplay[coin]) {
       if (!findFirst) {
-        result['fiat'].push(fiat);
+        result.fiat.push(fiat);
       }
     }
     findFirst = 1;

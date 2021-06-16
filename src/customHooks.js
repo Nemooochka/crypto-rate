@@ -3,7 +3,6 @@ import { loadData, getAvailablePairs } from './data/coinsData';
 
 export default function useCoins() {
   const [coinsDataUpd, setCoinsDataUpd] = useState([]);
-  const [availableCoins, setAvailableCoins] = useState([]);
   const [availableFiats, setAvailableFiats] = useState([]);
   const [isDataLoading, setIsDataLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -33,7 +32,7 @@ export default function useCoins() {
       getData();
     }, TEN_SEC_MS);
 
-    return () => clearInterval(interval); // This represents the unmount function, in which need to clear interval to prevent memory leaks.
+    return () => clearInterval(interval);
   }, []);
 
   return {
