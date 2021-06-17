@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 
 import styles from '../styles.css';
 
 import SelectFiat from './SelectFiat';
-import filters from './filters';
+import FilterElement from './FilterElement';
 
 export default function CoinsTable({ error, isDataLoading, availableFiats, coinsDataUpd }) {
   const [activeFiat, setActiveFiat] = useState('USD');
@@ -46,26 +46,15 @@ export default function CoinsTable({ error, isDataLoading, availableFiats, coins
         <div className={styles.tr}>
           {headers.map((elem, index) => {
             return (
-              <a
-                className={`${styles.th}
-                ${elem.filter === activeFilter.attr ? activeFilter.classes[0] : ''} ${
-                  elem.filter === activeFilter.attr ? activeFilter.classes[1] : ''
-                }`}
-                key={index}
-                onClick={e =>
-                  filters(
-                    e.currentTarget,
-                    coinsDataUpd,
-                    activeFiat,
-                    setActiveFilter,
-                    setFilteredArr,
-                  )
-                }
-                data-filter={elem.filter}
-              >
-                <i className={styles.sortingIcon}></i>
-                <span>{elem.title}</span>
-              </a>
+              <FilterElement
+                elem={elem}
+                index={index}
+                coinsDataUpd={coinsDataUpd}
+                activeFiat={activeFiat}
+                activeFilter={activeFilter}
+                setActiveFilter={setActiveFilter}
+                setFilteredArr={setFilteredArr}
+              />
             );
           })}
         </div>

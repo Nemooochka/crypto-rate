@@ -1,11 +1,11 @@
 import React from 'react';
 
 export default function filters(
-  activeElement,
   coinsDataUpd,
   activeFiat,
   setActiveFilter,
   setFilteredArr,
+  clickedFilter,
 ) {
   const filters = [
     {
@@ -32,6 +32,7 @@ export default function filters(
 
   let filteredArr = [];
   let classes = [];
+  let activeElement = clickedFilter.current;
 
   const getActiveFilter = () => {
     const activeElementFilter = activeElement.getAttribute('data-filter');
